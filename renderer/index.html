@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>커비 타이머</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --kirby-pink-light: #ffd9ec;
+    --kirby-pink: #ffb3d9;
+    --kirby-pink-dark: #ff8fc4;
+    --magic-pink: #ff8fc4;
+    --magic-purple: #c084fc;
+    --magic-blue: #7dd3fc;
+    --text-dark: #4a3a52;
+    --text-soft: #8a7592;
+    --ring-track: #fff0f7;
+    --heart: #ff7eb3;
+    --danger: #e8505b;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    font-family: 'Gaegu', 'Apple SD Gothic Neo', sans-serif;
+    color: var(--text-dark);
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+    -webkit-app-region: drag;
+  }
+
+  button, .kirby-timer, .modal, .modal-bg, input, [contenteditable="true"] {
+    -webkit-app-region: no-drag;
+  }
+
+  /* ---------- 우측 상단 + 버튼 ---------- */
+  .top-bar {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    z-index: 200;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+  body:hover .top-bar { opacity: 1; }
+
+  .top-btn {
+    background: rgba(255,255,255,0.95);
+    border: 2px solid var(--kirby-pink-dark);
+    color: var(--kirby-pink-dark);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: 'Jua', sans-serif;
+    font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 0 var(--kirby-pink-dark);
+  }
+  .top-btn:hover { background: var(--kirby-pink-light); }
+  .top-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--kirby-pink-dark); }
+  .top-btn.danger { border-color: var(--danger); color: var(--danger); box-shadow: 0 2px 0 var(--danger); }
+  .top-btn.danger:hover { background: #ffe4e6; }
+  .top-btn.dimmed { opacity: 0.45; }
+  /* Electron 환경이 아닐 때 숨김 (브라우저에서 프로토타이핑할 때) */
+  body:not(.is-electron) .electron-only { display: none; }
+
+  /* ---------- 가로 정렬 행 ---------- */
+  #row {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0;
+  }
+
+  /* ---------- Kirby 타이머 카드 ---------- */
+  .kirby-timer {
+    width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .character-stage {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    /* idle-bounce 제거됨 */
+  }
+  .kirby-timer.running .character-stage { animation: breathe 1.4s ease-in-out infinite; }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.03); }
+  }
+  .kirby-timer.complete .character-stage { animation: jump 0.6s ease-in-out infinite; }
+  @keyframes jump {
+    0%   { transform: translateY(0) rotate(-3deg); }
+    25%  { transform: translateY(-18px) rotate(0deg); }
+    50%  { transform: translateY(0) rotate(3deg); }
+    75%  { transform: translateY(-12px) rotate(0deg); }
+    100% { transform: translateY(0) rotate(-3deg); }
+  }
+
+  .character-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .character-art svg {
+    width: 100%; height: 100%; display: block;
+    shape-rendering: geometricPrecision;
+  }
+
+  .ring-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+  }
+  .ring-fill {
+    filter: drop-shadow(0 0 4px rgba(192, 132, 252, 0.6));
+    animation: ring-glow 4s ease-in-out infinite;
+  }
+  @keyframes ring-glow {
+    0%, 100% { filter: drop-shadow(0 0 3px rgba(255, 143, 196, 0.7)); }
+    33%      { filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.7)); }
+    66%      { filter: drop-shadow(0 0 4px rgba(125, 211, 252, 0.7)); }
+  }
+
+  .time-display {
+    position: absolute;
+    top: 130px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Jua', sans-serif;
+    font-size: 17px;
+    color: var(--text-dark);
+    letter-spacing: 1px;
+    cursor: pointer;
+    z-index: 5;
+    padding: 1px 7px;
+    border-radius: 8px;
+    white-space: nowrap;
+    text-align: center;
+    transition: background 0.15s;
+  }
+  .time-display:hover { background: rgba(255,255,255,0.5); }
+  .kirby-timer.complete .time-display {
+    color: var(--danger);
+    animation: shake 0.3s ease-in-out infinite;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+    50% { transform: translateX(-50%) rotate(2deg); }
+  }
+
+  .controls {
+    margin-top: 4px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+  .kirby-timer:hover .controls { opacity: 1; pointer-events: auto; }
+
+  .ctrl-btn {
+    background: rgba(255,255,255,0.95);
+    border: 2px solid var(--kirby-pink-light);
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-dark);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 0 var(--kirby-pink-light);
+  }
+  .ctrl-btn:hover { background: var(--kirby-pink-light); }
+  .ctrl-btn.danger { color: var(--danger); border-color: #ffd0d4; box-shadow: 0 2px 0 #ffd0d4; }
+  .ctrl-btn.danger:hover { background: #ffe4e6; }
+
+  /* 캐릭터 사이 간격 0 (딱 붙어서 정렬) */
+
+  /* ---------- 종료시 반짝이 ---------- */
+  .sparkle {
+    position: absolute;
+    pointer-events: none;
+    width: 22px; height: 22px;
+    animation: sparkle-pop 1.2s ease-out forwards;
+    z-index: 20;
+  }
+  @keyframes sparkle-pop {
+    0%   { transform: translate(0,0) scale(0) rotate(0); opacity: 1; }
+    50%  { opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.2) rotate(180deg); opacity: 0; }
+  }
+
+  /* ---------- 모달 ---------- */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(74, 58, 82, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 22px;
+    padding: 24px 28px;
+    box-shadow: 0 8px 32px rgba(255, 143, 196, 0.4);
+    border: 3px solid var(--kirby-pink-light);
+    min-width: 320px;
+    max-width: 92vw;
+  }
+  .modal h2 {
+    font-family: 'Jua', sans-serif;
+    color: var(--text-dark);
+    margin-bottom: 14px;
+    font-size: 20px;
+    text-align: center;
+  }
+  .section-label {
+    font-family: 'Jua', sans-serif;
+    font-size: 13px;
+    color: var(--text-soft);
+    margin: 12px 0 6px;
+    text-align: center;
+  }
+  .time-inputs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .time-inputs input {
+    width: 60px; height: 50px;
+    text-align: center;
+    font-family: 'Jua', sans-serif;
+    font-size: 26px;
+    border: 3px solid var(--kirby-pink-light);
+    border-radius: 12px;
+    background: #fffafd;
+    color: var(--text-dark);
+    outline: none;
+  }
+  .time-inputs input:focus { border-color: var(--kirby-pink-dark); }
+  .time-inputs span {
+    font-family: 'Jua', sans-serif;
+    font-size: 22px;
+    color: var(--text-soft);
+  }
+  .quick-presets {
+    display: flex; flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .preset {
+    background: var(--kirby-pink-light);
+    border: none;
+    color: var(--text-dark);
+    padding: 5px 11px;
+    border-radius: 12px;
+    font-family: 'Gaegu', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .preset:hover { background: var(--kirby-pink); color: white; }
+
+  .character-picker {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .char-option {
+    width: 56px; height: 56px;
+    border: 3px solid var(--kirby-pink-light);
+    border-radius: 12px;
+    cursor: pointer;
+    background: #fffafd;
+    padding: 4px;
+    transition: all 0.15s;
+    overflow: hidden;
+  }
+  .char-option:hover { border-color: var(--kirby-pink); transform: translateY(-2px); }
+  .char-option.selected {
+    border-color: var(--kirby-pink-dark);
+    background: var(--kirby-pink-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 var(--kirby-pink-dark);
+  }
+  .char-option svg { width: 100%; height: 100%; display: block; }
+
+  .char-folder-row {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .text-link {
+    background: none;
+    border: none;
+    color: var(--text-soft);
+    font-family: 'Gaegu', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 4px 8px;
+  }
+  .text-link:hover { color: var(--kirby-pink-dark); }
+
+  .sound-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin: 12px 0;
+    padding: 8px 12px;
+    background: #fffafd;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+  .switch {
+    position: relative;
+    width: 44px; height: 24px;
+    background: #ffe0ed;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .switch.on { background: var(--kirby-pink-dark); }
+  .switch::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  }
+  .switch.on::after { left: 23px; }
+
+  .modal-actions {
+    display: flex; gap: 8px;
+    margin-top: 14px;
+  }
+  .pill-btn {
+    flex: 1;
+    background: white;
+    border: 3px solid var(--kirby-pink-dark);
+    color: var(--kirby-pink-dark);
+    font-family: 'Jua', sans-serif;
+    font-size: 16px;
+    padding: 8px 0;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 var(--kirby-pink-dark);
+  }
+  .pill-btn:hover { transform: translateY(2px); box-shadow: 0 2px 0 var(--kirby-pink-dark); }
+  .pill-btn.secondary {
+    background: #fffafd;
+    color: var(--text-soft);
+    border-color: #e0d4e6;
+    box-shadow: 0 4px 0 #e0d4e6;
+  }
+  .pill-btn.secondary:hover { box-shadow: 0 2px 0 #e0d4e6; }
+</style>
+</head>
+<body>
+
+<!-- ===== 페이지 전역 매직 그라데이션 (모든 ring이 공유) ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="magicGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="200" y2="200">
+      <stop offset="0%" stop-color="#ff8fc4">
+        <animate attributeName="stop-color"
+                 values="#ff8fc4;#c084fc;#7dd3fc;#fda4d6;#ff8fc4"
+                 dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="50%" stop-color="#c084fc">
+        <animate attributeName="stop-color"
+                 values="#c084fc;#7dd3fc;#fda4d6;#ff8fc4;#c084fc"
+                 dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#7dd3fc">
+        <animate attributeName="stop-color"
+                 values="#7dd3fc;#fda4d6;#ff8fc4;#c084fc;#7dd3fc"
+                 dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <animateTransform attributeName="gradientTransform" type="rotate"
+                        from="0 100 100" to="360 100 100"
+                        dur="8s" repeatCount="indefinite"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="top-bar">
+  <button class="top-btn" id="addBtn" title="새 친구 추가">+</button>
+  <button class="top-btn electron-only" id="pinBtn" title="항상 위에 (켜짐)">📌</button>
+  <button class="top-btn electron-only" id="hideBtn" title="트레이로 숨기기">−</button>
+  <button class="top-btn electron-only danger" id="closeBtn" title="종료">✕</button>
+</div>
+
+<div id="row"></div>
+
+<!-- Settings Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">⏰ 시간 설정</h2>
+
+    <div class="section-label">캐릭터</div>
+    <div class="character-picker" id="charPicker"></div>
+    <div class="char-folder-row electron-only">
+      <button class="text-link" id="openCharFolderBtn" type="button">📁 캐릭터 폴더 열기</button>
+    </div>
+
+    <div class="section-label">⏳ 시간</div>
+    <div class="time-inputs">
+      <input type="number" id="inH" min="0" max="23" value="0">
+      <span>:</span>
+      <input type="number" id="inM" min="0" max="59" value="25">
+      <span>:</span>
+      <input type="number" id="inS" min="0" max="59" value="0">
+    </div>
+    <div class="quick-presets">
+      <button class="preset" data-min="5">5분</button>
+      <button class="preset" data-min="10">10분</button>
+      <button class="preset" data-min="25">25분</button>
+      <button class="preset" data-min="45">45분</button>
+      <button class="preset" data-min="60">1시간</button>
+      <button class="preset" data-min="90">1시간 30분</button>
+      <button class="preset" data-min="240">4시간</button>
+    </div>
+
+    <div class="sound-row">
+      <span>🔊 종료 사운드</span>
+      <div class="switch on" id="soundSwitch"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="pill-btn secondary" id="cancelBtn">취소</button>
+      <button class="pill-btn" id="saveBtn">시작!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   커비 타이머 — 캐릭터 플러그인 시스템
+   --------------------------------------------------------------
+   ▸ 캐릭터 SVG는 CHARACTERS 객체에 등록 (또는 /characters/ 폴더)
+   ▸ SVG 안의 레이어 ID(아래 anchor 목록)로 애니메이션 자동 연결
+   ▸ 주입 시 ID에 unique prefix 자동 부여로 ID 충돌 방지
+
+   [Anchor 레이어 이름 규약]  Figma → SVG export
+     필수:  kt-body
+     권장:  kt-eyes-open, kt-mouth-default
+     선택:  kt-eyes-closed       (깜빡임)
+            kt-mouth-celebration (종료 입모양)
+            kt-arm-left, kt-arm-right
+   ============================================================ */
+
+const STORAGE_KEY = 'kirbyTimers_v3';
+
+// ======================== 캐릭터 레지스트리 ========================
+const CHARACTERS = {
+  kirby: {
+    name: '커비',
+    svg: getDefaultKirbySVG(),
+  },
+};
+
+function getDefaultKirbySVG() {
+  return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <defs>
+    <radialGradient id="bodyG" cx="40%" cy="35%" r="65%">
+      <stop offset="0%"  stop-color="#ffc8de"/>
+      <stop offset="100%" stop-color="#ffabd0"/>
+    </radialGradient>
+    <radialGradient id="cheekG" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff7eb3"/>
+      <stop offset="100%" stop-color="#ff7eb3" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="eyeG" cx="50%" cy="35%" r="60%">
+      <stop offset="0%"  stop-color="#5266c2"/>
+      <stop offset="60%" stop-color="#2d3a8c"/>
+      <stop offset="100%" stop-color="#1a235e"/>
+    </radialGradient>
+    <radialGradient id="feetG" cx="50%" cy="35%" r="60%">
+      <stop offset="0%"  stop-color="#ff7280"/>
+      <stop offset="60%" stop-color="#e8505b"/>
+      <stop offset="100%" stop-color="#b13540"/>
+    </radialGradient>
+    <linearGradient id="cupOuter" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"  stop-color="#3a4666"/>
+      <stop offset="100%" stop-color="#1a2138"/>
+    </linearGradient>
+    <linearGradient id="cupGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"  stop-color="#ffe18a"/>
+      <stop offset="100%" stop-color="#c89236"/>
+    </linearGradient>
+    <linearGradient id="cupBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"  stop-color="#7eb6e8"/>
+      <stop offset="100%" stop-color="#3d6fa0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 그림자 (발이 떠있는 느낌으로 흐리게) -->
+  <ellipse cx="100" cy="180" rx="50" ry="4" fill="rgba(74,58,82,0.13)"/>
+
+  <!-- 발 (위에서 본 10각 타원, 팔자로 회전, 살짝 띄움) -->
+  <g id="kt-feet">
+    <g transform="rotate(-22 72 153)">
+      <polygon points="72,135 80.23,138.44 85.31,147.44 85.31,158.56 80.23,167.56 72,171 63.77,167.56 58.69,158.56 58.69,147.44 63.77,138.44"
+               fill="url(#feetG)"/>
+    </g>
+    <g transform="rotate(22 128 153)">
+      <polygon points="128,135 136.23,138.44 141.31,147.44 141.31,158.56 136.23,167.56 128,171 119.77,167.56 114.69,158.56 114.69,147.44 119.77,138.44"
+               fill="url(#feetG)"/>
+    </g>
+  </g>
+
+  <!-- 팔 (8각형, 회전) -->
+  <g id="kt-arm-left" transform="rotate(-25 30 110)">
+    <polygon points="30,90 39.9,95.9 44,110 39.9,124.1 30,130 20.1,124.1 16,110 20.1,95.9" fill="url(#bodyG)"/>
+  </g>
+  <g id="kt-arm-right" transform="rotate(25 170 110)">
+    <polygon points="170,90 179.9,95.9 184,110 179.9,124.1 170,130 160.1,124.1 156,110 160.1,95.9" fill="url(#bodyG)"/>
+  </g>
+
+  <!-- 헤드셋 밴드 (검정 단일색 폴리라인, 몸통과 명확히 구분) -->
+  <g id="kt-headband">
+    <path d="M 42,79 L 43.7,67.5 L 67.5,43.7 L 100,35 L 132.5,43.7 L 156.3,67.5 L 158,79"
+          stroke="#1a1a1a" stroke-width="10" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- (헤드밴드는 위 레이어로 옮김) -->
+
+  <!-- 몸통 (12각형) -->
+  <polygon id="kt-body"
+    points="100,35 132.5,43.7 156.3,67.5 165,100 156.3,132.5 132.5,156.3 100,165 67.5,156.3 43.7,132.5 35,100 43.7,67.5 67.5,43.7"
+    fill="url(#bodyG)"/>
+
+  <!-- 볼 (살짝 다각형 느낌의 부드러운 ellipse) -->
+  <g id="kt-cheeks">
+    <ellipse cx="72" cy="118" rx="11" ry="6" fill="url(#cheekG)"/>
+    <ellipse cx="128" cy="118" rx="11" ry="6" fill="url(#cheekG)"/>
+  </g>
+
+  <!-- 큰 눈 (10각형) -->
+  <g id="kt-eyes-open">
+    <polygon points="85,84 90.3,86.7 93.6,93.7 93.6,102.3 90.3,109.3 85,112 79.7,109.3 76.4,102.3 76.4,93.7 79.7,86.7"
+             fill="url(#eyeG)"/>
+    <polygon points="115,84 120.3,86.7 123.6,93.7 123.6,102.3 120.3,109.3 115,112 109.7,109.3 106.4,102.3 106.4,93.7 109.7,86.7"
+             fill="url(#eyeG)"/>
+    <!-- 위쪽 큰 하이라이트 -->
+    <ellipse cx="85" cy="91" rx="3" ry="4" fill="white"/>
+    <ellipse cx="115" cy="91" rx="3" ry="4" fill="white"/>
+    <!-- 아래쪽 작은 하이라이트 -->
+    <ellipse cx="86" cy="106" rx="1.4" ry="2" fill="white" opacity="0.7"/>
+    <ellipse cx="116" cy="106" rx="1.4" ry="2" fill="white" opacity="0.7"/>
+  </g>
+
+  <!-- 감은 눈 (깜빡임용) -->
+  <g id="kt-eyes-closed" style="display:none">
+    <path d="M 76 96 Q 85 89, 94 96" stroke="#2d3a8c" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 106 96 Q 115 89, 124 96" stroke="#2d3a8c" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- 입 (눈 가까이 위로 올림, 사이즈 축소) -->
+  <path id="kt-mouth-default" d="M 96 117 Q 100 121, 104 117"
+        stroke="#4a3a52" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path id="kt-mouth-celebration" d="M 95 115 Q 100 124, 105 115 Q 100 120, 95 115 Z"
+        fill="#c93d49" stroke="#4a3a52" stroke-width="1.3" style="display:none"/>
+
+  <!-- 헤드셋 컵 (D자 + 컵 안쪽으로 휘는 로우폴리 곡선, 별은 측면 각도로 변형) -->
+  <g id="kt-headset">
+    <!-- 왼쪽 컵: 외곽 → 골드 → 블루 → 별 -->
+    <path d="M 42,79 A 21 21 0 0 0 42,121 L 39,114 L 37,107 L 36,100 L 37,93 L 39,86 Z" fill="url(#cupOuter)"/>
+    <path d="M 42,84 A 16 16 0 0 0 42,116 L 39.5,110 L 38,100 L 39.5,90 Z" fill="url(#cupGold)"/>
+    <path d="M 42,88.5 A 11.5 11.5 0 0 0 42,111.5 L 40,105 L 39,100 L 40,95 Z" fill="url(#cupBlue)"/>
+    <g transform="translate(32 100) rotate(-15) scale(0.65 0.95)">
+      <polygon points="0,-7 1.76,-2.43 6.66,-2.16 2.85,0.93 4.12,5.66 0,3 -4.12,5.66 -2.85,0.93 -6.66,-2.16 -1.76,-2.43"
+               fill="white"/>
+    </g>
+
+    <!-- 오른쪽 컵 (좌우 대칭) -->
+    <path d="M 158,79 A 21 21 0 0 1 158,121 L 161,114 L 163,107 L 164,100 L 163,93 L 161,86 Z" fill="url(#cupOuter)"/>
+    <path d="M 158,84 A 16 16 0 0 1 158,116 L 160.5,110 L 162,100 L 160.5,90 Z" fill="url(#cupGold)"/>
+    <path d="M 158,88.5 A 11.5 11.5 0 0 1 158,111.5 L 160,105 L 161,100 L 160,95 Z" fill="url(#cupBlue)"/>
+    <g transform="translate(168 100) rotate(15) scale(0.65 0.95)">
+      <polygon points="0,-7 1.76,-2.43 6.66,-2.16 2.85,0.93 4.12,5.66 0,3 -4.12,5.66 -2.85,0.93 -6.66,-2.16 -1.76,-2.43"
+               fill="white"/>
+    </g>
+  </g>
+</svg>`;
+}
+
+// ======================== 외부 캐릭터 로드 ========================
+// Electron 환경: window.kirbyAPI.listCharacters() 사용 (메인 프로세스가 fs로 읽음)
+// 브라우저 환경: fetch fallback (dev server 등)
+async function loadExternalCharacters() {
+  // 1순위: Electron IPC
+  if (window.kirbyAPI?.listCharacters) {
+    try {
+      const { characters } = await window.kirbyAPI.listCharacters();
+      for (const c of characters) {
+        CHARACTERS[c.id] = { name: c.name || c.id, svg: c.svg };
+      }
+      return;
+    } catch (e) { console.warn('Electron character load failed:', e); }
+  }
+  // 2순위: HTTP fetch (브라우저/dev server)
+  try {
+    const res = await fetch('characters/manifest.json');
+    if (!res.ok) return;
+    const manifest = await res.json();
+    for (const id of (manifest.characters || [])) {
+      try {
+        const [svgRes, metaRes] = await Promise.all([
+          fetch(`characters/${id}/character.svg`),
+          fetch(`characters/${id}/meta.json`)
+        ]);
+        if (svgRes.ok && metaRes.ok) {
+          const meta = await metaRes.json();
+          CHARACTERS[id] = { ...meta, svg: await svgRes.text() };
+        }
+      } catch (_) {}
+    }
+  } catch (_) { /* file:// 환경에서는 정상 실패 */ }
+}
+
+// ======================== SVG 주입: 고유 ID prefix ========================
+let _injectCounter = 0;
+function injectCharSVG(svgString, container) {
+  const prefix = `c${++_injectCounter}_`;
+  const scoped = svgString
+    .replace(/\bid="([^"]+)"/g, (_, id) => `id="${prefix}${id}"`)
+    .replace(/url\(#([^)]+)\)/g, (_, id) => `url(#${prefix}${id})`)
+    .replace(/(\bxlink:href|\bhref)="#([^"]+)"/g, (_, attr, id) => `${attr}="#${prefix}${id}"`);
+  container.innerHTML = scoped;
+}
+const findAnchor = (root, anchor) => root.querySelector(`[id$="${anchor}"]`);
+
+// ======================== 사운드 ========================
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { return null; }
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playKirbyDoneSound() {
+  const ctx = getAudioCtx(); if (!ctx) return;
+  const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+  const now = ctx.currentTime;
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    const t = now + i * 0.09;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.34);
+  });
+  setTimeout(() => {
+    const osc = ctx.createOscillator(), gain = ctx.createGain(), t = ctx.currentTime;
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.exponentialRampToValueAtTime(1400, t + 0.18);
+    osc.frequency.exponentialRampToValueAtTime(900, t + 0.36);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.15, t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.42);
+  }, 540);
+}
+
+// ======================== 시간 포맷 ========================
+const fmt = (s) => {
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+};
+
+// ======================== 타이머 모델 + 카드 ========================
+let nextId = 1;
+const timers = [];
+
+function makeTimer({minutes = 25, seconds = 0, characterId = 'kirby', soundOn = true} = {}) {
+  const node = document.createElement('div');
+  node.className = 'kirby-timer';
+  node.innerHTML = `
+    <div class="character-stage">
+      <div class="character-art"></div>
+      <svg class="ring-overlay" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <circle class="ring-track" cx="100" cy="100" r="88" fill="none"
+                stroke="var(--ring-track)" stroke-width="6"/>
+        <circle class="ring-fill" cx="100" cy="100" r="88" fill="none"
+                stroke="url(#magicGrad)" stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="553" stroke-dashoffset="0"
+                transform="rotate(-90 100 100)"/>
+      </svg>
+      <div class="time-display">00:00</div>
+    </div>
+    <div class="controls">
+      <button class="ctrl-btn" data-act="reset" title="리셋">↺</button>
+      <button class="ctrl-btn" data-act="set" title="설정">⚙</button>
+      <button class="ctrl-btn danger" data-act="delete" title="삭제">✕</button>
+    </div>
+  `;
+
+  const totalSec = (minutes * 60) + seconds;
+  const t = {
+    id: nextId++,
+    totalSec, remainingSec: totalSec,
+    running: false, complete: false, soundOn,
+    character: characterId,
+    el: node, lastTick: null,
+  };
+
+  setCharacter(t, characterId);
+  bindEvents(t);
+  renderTimer(t);
+  startBlinkLoop(t);
+
+  timers.push(t);
+  rebuildRow();
+  saveState();
+  return t;
+}
+
+function setCharacter(t, charId) {
+  t.character = charId in CHARACTERS ? charId : 'kirby';
+  const char = CHARACTERS[t.character];
+
+  const art = t.el.querySelector('.character-art');
+  injectCharSVG(char.svg, art);
+
+  const eyesClosed = findAnchor(t.el, 'kt-eyes-closed');
+  const mouthCeleb = findAnchor(t.el, 'kt-mouth-celebration');
+  if (eyesClosed) eyesClosed.style.display = 'none';
+  if (mouthCeleb) mouthCeleb.style.display = 'none';
+
+  applyMouthState(t);
+}
+
+function applyMouthState(t) {
+  const mDef = findAnchor(t.el, 'kt-mouth-default');
+  const mCel = findAnchor(t.el, 'kt-mouth-celebration');
+  if (mDef && mCel) {
+    mDef.style.display = t.complete ? 'none' : '';
+    mCel.style.display = t.complete ? '' : 'none';
+  }
+}
+
+function renderTimer(t) {
+  t.el.querySelector('.time-display').textContent = fmt(t.remainingSec);
+  const ring = t.el.querySelector('.ring-fill');
+  const C = 553; // 2π × 88
+  const ratio = t.totalSec > 0 ? t.remainingSec / t.totalSec : 0;
+  ring.setAttribute('stroke-dashoffset', C * (1 - ratio));
+  t.el.classList.toggle('running', t.running && !t.complete);
+  t.el.classList.toggle('complete', t.complete);
+  applyMouthState(t);
+}
+
+// ======================== 행 재구성 ========================
+const ROW = document.getElementById('row');
+function rebuildRow() {
+  ROW.innerHTML = '';
+  timers.forEach(t => ROW.appendChild(t.el));
+}
+
+// ======================== 이벤트 ========================
+function bindEvents(t) {
+  const node = t.el;
+  node.addEventListener('click', (e) => {
+    if (e.target.closest('.time-display, .ctrl-btn')) return;
+    toggleStart(t);
+  });
+  node.querySelector('.time-display').addEventListener('click', (e) => {
+    e.stopPropagation(); openModal(t);
+  });
+  node.querySelectorAll('.ctrl-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const act = btn.dataset.act;
+      if (act === 'reset')       resetTimer(t);
+      else if (act === 'set')    openModal(t);
+      else if (act === 'delete') deleteTimer(t);
+    });
+  });
+}
+
+function toggleStart(t) {
+  if (t.complete) { resetTimer(t); return; }
+  if (t.remainingSec <= 0) { openModal(t); return; }
+  t.running = !t.running;
+  t.lastTick = t.running ? performance.now() : null;
+  if (t.running) getAudioCtx();
+  renderTimer(t); saveState();
+}
+function resetTimer(t) {
+  t.running = false; t.complete = false;
+  t.remainingSec = t.totalSec;
+  renderTimer(t); saveState();
+}
+function deleteTimer(t) {
+  const i = timers.indexOf(t);
+  if (i >= 0) timers.splice(i, 1);
+  t.el.remove();
+  rebuildRow(); saveState();
+}
+
+// ======================== 모달 ========================
+let activeTimer = null;
+const modal = document.getElementById('modal');
+const inH = document.getElementById('inH');
+const inM = document.getElementById('inM');
+const inS = document.getElementById('inS');
+const soundSwitch = document.getElementById('soundSwitch');
+const charPicker = document.getElementById('charPicker');
+
+function buildCharPicker(selectedId) {
+  charPicker.innerHTML = '';
+  Object.keys(CHARACTERS).forEach(id => {
+    const opt = document.createElement('div');
+    opt.className = 'char-option' + (id === selectedId ? ' selected' : '');
+    opt.dataset.charId = id;
+    opt.title = CHARACTERS[id].name || id;
+    const preview = document.createElement('div');
+    preview.style.cssText = 'width:100%;height:100%';
+    injectCharSVG(CHARACTERS[id].svg, preview);
+    opt.appendChild(preview);
+    opt.addEventListener('click', () => {
+      charPicker.querySelectorAll('.char-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+    });
+    charPicker.appendChild(opt);
+  });
+}
+
+function openModal(t) {
+  activeTimer = t;
+  inH.value = Math.floor(t.totalSec / 3600);
+  inM.value = Math.floor((t.totalSec % 3600) / 60);
+  inS.value = t.totalSec % 60;
+  soundSwitch.classList.toggle('on', t.soundOn);
+  buildCharPicker(t.character);
+  modal.classList.add('show');
+  setTimeout(() => inM.focus(), 50);
+}
+function closeModal() { modal.classList.remove('show'); activeTimer = null; }
+
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+soundSwitch.addEventListener('click', () => soundSwitch.classList.toggle('on'));
+
+document.querySelectorAll('.preset').forEach(p => {
+  p.addEventListener('click', () => {
+    const m = parseInt(p.dataset.min, 10);
+    inH.value = Math.floor(m / 60); inM.value = m % 60; inS.value = 0;
+  });
+});
+
+document.getElementById('saveBtn').addEventListener('click', () => {
+  if (!activeTimer) return;
+  const h = Math.max(0, parseInt(inH.value, 10) || 0);
+  const m = Math.max(0, parseInt(inM.value, 10) || 0);
+  const s = Math.max(0, parseInt(inS.value, 10) || 0);
+  const total = h * 3600 + m * 60 + s;
+  if (total <= 0) { closeModal(); return; }
+
+  const selectedChar = charPicker.querySelector('.char-option.selected')?.dataset.charId || 'kirby';
+  if (selectedChar !== activeTimer.character) {
+    setCharacter(activeTimer, selectedChar);
+  }
+  activeTimer.totalSec = total;
+  activeTimer.remainingSec = total;
+  activeTimer.complete = false;
+  activeTimer.running = true;
+  activeTimer.lastTick = performance.now();
+  activeTimer.soundOn = soundSwitch.classList.contains('on');
+  getAudioCtx();
+  renderTimer(activeTimer);
+  closeModal();
+  saveState();
+});
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  makeTimer({ minutes: 10 });
+});
+
+// ======================== Electron 통합 ========================
+// preload.js의 contextBridge로 노출된 window.kirbyAPI 사용.
+// 브라우저 환경에서는 undefined이므로 안전하게 분기.
+if (window.kirbyAPI) {
+  document.body.classList.add('is-electron');
+
+  const closeBtn = document.getElementById('closeBtn');
+  const hideBtn = document.getElementById('hideBtn');
+  const pinBtn = document.getElementById('pinBtn');
+
+  closeBtn?.addEventListener('click', () => window.kirbyAPI.closeWindow());
+  hideBtn?.addEventListener('click', () => window.kirbyAPI.hideWindow());
+
+  // 항상 위 토글
+  pinBtn?.addEventListener('click', async () => {
+    const isOn = await window.kirbyAPI.toggleAlwaysOnTop();
+    pinBtn.classList.toggle('dimmed', !isOn);
+    pinBtn.title = isOn ? '항상 위에 (켜짐)' : '항상 위에 (꺼짐)';
+  });
+
+  // 시작 시 핀 버튼 상태 초기화
+  window.kirbyAPI.isAlwaysOnTop().then(isOn => {
+    pinBtn?.classList.toggle('dimmed', !isOn);
+    if (pinBtn) pinBtn.title = isOn ? '항상 위에 (켜짐)' : '항상 위에 (꺼짐)';
+  });
+
+  // 캐릭터 폴더 열기 (사용자가 직접 SVG 추가 가능)
+  const openCharFolderBtn = document.getElementById('openCharFolderBtn');
+  openCharFolderBtn?.addEventListener('click', () => {
+    window.kirbyAPI.openCharactersFolder();
+  });
+}
+
+// ======================== 메인 루프 ========================
+function tick() {
+  const now = performance.now();
+  timers.forEach(t => {
+    if (t.running && !t.complete) {
+      const dt = (now - (t.lastTick || now)) / 1000;
+      t.lastTick = now;
+      t.remainingSec -= dt;
+      if (t.remainingSec <= 0) {
+        t.remainingSec = 0;
+        t.running = false;
+        t.complete = true;
+        if (t.soundOn) playKirbyDoneSound();
+        spawnSparkles(t);
+      }
+      renderTimer(t);
+    }
+  });
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ======================== 반짝이 ========================
+const STAR_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 2 L13.5 9 L21 10 L15 14.5 L17 22 L12 17.5 L7 22 L9 14.5 L3 10 L10.5 9 Z"
+        fill="#ffd34e" stroke="#ff8fc4" stroke-width="1"/>
+</svg>`;
+function spawnSparkles(t) {
+  const stage = t.el.querySelector('.character-stage');
+  for (let i = 0; i < 12; i++) addSparkle(stage);
+  let count = 0;
+  const iv = setInterval(() => {
+    if (!t.complete || count++ > 4) { clearInterval(iv); return; }
+    for (let i = 0; i < 5; i++) addSparkle(stage);
+  }, 600);
+}
+function addSparkle(stage) {
+  const s = document.createElement('div');
+  s.className = 'sparkle'; s.innerHTML = STAR_SVG;
+  s.style.left = (70 + Math.random() * 60) + 'px';
+  s.style.top  = (70 + Math.random() * 60) + 'px';
+  const ang = Math.random() * Math.PI * 2, dist = 50 + Math.random() * 80;
+  s.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+  s.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+  stage.appendChild(s);
+  setTimeout(() => s.remove(), 1300);
+}
+
+// ======================== 깜빡임 ========================
+function startBlinkLoop(t) {
+  const blink = () => {
+    if (!t.el.isConnected) return;
+    if (!t.complete) {
+      const open = findAnchor(t.el, 'kt-eyes-open');
+      const closed = findAnchor(t.el, 'kt-eyes-closed');
+      if (open && closed) {
+        open.style.display = 'none'; closed.style.display = '';
+        setTimeout(() => {
+          if (!t.el.isConnected) return;
+          open.style.display = ''; closed.style.display = 'none';
+        }, 140);
+      }
+    }
+    setTimeout(blink, 3000 + Math.random() * 4000);
+  };
+  setTimeout(blink, 2000 + Math.random() * 3000);
+}
+
+// ======================== 저장 ========================
+function saveState() {
+  try {
+    const data = timers.map(t => ({
+      totalSec: t.totalSec, remainingSec: t.remainingSec,
+      soundOn: t.soundOn, character: t.character
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (_) {}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
+}
+
+// ======================== 초기화 ========================
+async function init() {
+  await loadExternalCharacters();
+  const saved = loadState();
+  if (saved && saved.length) {
+    saved.forEach(s => {
+      const t = makeTimer({
+        minutes: 0,
+        characterId: s.character || 'kirby',
+        soundOn: s.soundOn !== false
+      });
+      t.totalSec = s.totalSec;
+      t.remainingSec = s.remainingSec;
+      renderTimer(t);
+    });
+  } else {
+    makeTimer({ minutes: 90,  characterId: 'kirby' });
+    makeTimer({ minutes: 240, characterId: 'kirby' });
+  }
+}
+init();
+
+setInterval(saveState, 5000);
+
+document.addEventListener('keydown', (e) => {
+  if (modal.classList.contains('show')) {
+    if (e.key === 'Enter') document.getElementById('saveBtn').click();
+    if (e.key === 'Escape') closeModal();
+    return;
+  }
+  if (e.code === 'Space' && timers.length) {
+    const target = timers.find(t => t.el.matches(':hover')) || timers[0];
+    toggleStart(target);
+    e.preventDefault();
+  }
+});
+</script>
+</body>
+</html>

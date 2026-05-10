@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f3e8ff"/>
+      <stop offset="55%" stop-color="#fff5fb"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd9ec"/>
+      <stop offset="100%" stop-color="#ffabd0"/>
+    </linearGradient>
+    <linearGradient id="cup" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="100%" stop-color="#4a4a4a"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <!-- \°ô¬ ¸µ (12 ü¬) -->
+  <polygon fill="url(#body)" stroke="#ff9ec8" stroke-width="1.5"
+    points="128,46 178,58 210,98 210,158 178,198 128,210 78,198 46,158 46,98 78,58"/>
+  <!--  -->
+  <ellipse cx="108" cy="118" rx="9" ry="11" fill="#3d2d45"/>
+  <ellipse cx="148" cy="118" rx="9" ry="11" fill="#3d2d45"/>
+  <ellipse cx="110" cy="114" rx="3" ry="4" fill="#ffffff" opacity="0.85"/>
+  <ellipse cx="150" cy="114" rx="3" ry="4" fill="#ffffff" opacity="0.85"/>
+  <!-- … -->
+  <path d="M118 138 Q128 148 138 138" fill="none" stroke="#c94d7a" stroke-width="3" stroke-linecap="round"/>
+  <!-- äÜ4Ü -->
+  <path d="M52 108 Q128 22 204 108" fill="none" stroke="#1a1a1a" stroke-width="14" stroke-linecap="round"/>
+  <!-- t´õ -->
+  <path d="M44 100 Q38 128 44 156 L58 152 Q54 128 58 104 Z" fill="url(#cup)" stroke="#1a1a1a" stroke-width="2"/>
+  <path d="M212 100 Q218 128 212 156 L198 152 Q202 128 198 104 Z" fill="url(#cup)" stroke="#1a1a1a" stroke-width="2"/>
+</svg>

@@ -1,0 +1,54 @@
+<!--
+  새 캐릭터 SVG 템플릿
+  ----------------------------
+  이 파일을 복사해서 새 캐릭터를 만드세요.
+  - viewBox 200x200 유지 (다른 캐릭터와 비율 일관성)
+  - 레이어 ID는 아래 주석을 참고해서 보존
+  - Figma에서 디자인 시 레이어명을 정확히 같게 지어야 export 시 ID로 변환됨
+-->
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <defs>
+    <radialGradient id="bodyG" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FILL_LIGHT"/>
+      <stop offset="100%" stop-color="#FILL_DARK"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 그림자 -->
+  <ellipse cx="100" cy="180" rx="50" ry="4" fill="rgba(74,58,82,0.13)"/>
+
+  <!-- 발 -->
+  <g id="kt-feet">
+    <!-- TODO: 발 모양 그리기 -->
+  </g>
+
+  <!-- 팔 -->
+  <g id="kt-arm-left"><!-- TODO --></g>
+  <g id="kt-arm-right"><!-- TODO --></g>
+
+  <!-- 몸통 (필수) -->
+  <polygon id="kt-body"
+    points="100,35 132.5,43.7 156.3,67.5 165,100 156.3,132.5 132.5,156.3 100,165 67.5,156.3 43.7,132.5 35,100 43.7,67.5 67.5,43.7"
+    fill="url(#bodyG)"/>
+
+  <!-- 볼 -->
+  <g id="kt-cheeks"><!-- TODO --></g>
+
+  <!-- 평소 눈 (그룹) -->
+  <g id="kt-eyes-open">
+    <!-- TODO: 눈 -->
+  </g>
+
+  <!-- 감은 눈 (깜빡임용, 처음엔 숨김) -->
+  <g id="kt-eyes-closed" style="display:none">
+    <!-- TODO: 감은 눈 (호 모양) -->
+  </g>
+
+  <!-- 평소 입 -->
+  <path id="kt-mouth-default" d="M 96 117 Q 100 121, 104 117"
+        stroke="#4a3a52" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- 종료 시 입 (처음엔 숨김) -->
+  <path id="kt-mouth-celebration" d="M 95 115 Q 100 124, 105 115 Q 100 120, 95 115 Z"
+        fill="#c93d49" stroke="#4a3a52" stroke-width="1.3" style="display:none"/>
+</svg>

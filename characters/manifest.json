@@ -1,0 +1,4 @@
+{
+  "$comment": "여기에 외부 캐릭터 ID를 등록하세요. 예: { \"characters\": [\"poyo\", \"cookie\"] }",
+  "characters": []
+}

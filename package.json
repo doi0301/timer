@@ -1,0 +1,88 @@
+{
+  "name": "kirby-timer",
+  "version": "1.0.0",
+  "description": "데스크탑 위에 떠다니는 귀요미 커비 타이머",
+  "main": "main.js",
+  "author": "doi",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "KIRBY_DEV=1 electron .",
+    "dev:win": "set KIRBY_DEV=1 && electron .",
+    "pack": "electron-builder --dir",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl",
+    "build:icons": "node scripts/build-icons.js",
+    "postinstall": "node scripts/build-icons.js"
+  },
+  "build": {
+    "appId": "com.doi.kirbytimer",
+    "productName": "커비 타이머",
+    "copyright": "Copyright © 2026 doi",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/*.{md,markdown}"
+    ],
+    "extraResources": [
+      {
+        "from": "characters",
+        "to": "characters",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "커비 타이머",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "커비 타이머",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "png2icons": "^2.0.1",
+    "pngjs": "^6.0.0",
+    "to-ico": "^1.1.5"
+  },
+  "dependencies": {}
+}
