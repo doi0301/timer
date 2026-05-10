@@ -33,46 +33,20 @@
     user-select: none;
     -webkit-user-select: none;
     overflow: hidden;
-    -webkit-app-region: drag;
-  }
-
-  button, .kirby-timer, .modal, .modal-bg, input, [contenteditable="true"] {
     -webkit-app-region: no-drag;
   }
 
-  /* ---------- 우측 상단 + 버튼 ---------- */
-  .top-bar {
-    position: fixed;
-    top: 8px;
-    right: 8px;
-    z-index: 200;
-    opacity: 0.4;
-    transition: opacity 0.2s;
+  button, .modal, .modal-bg, input, [contenteditable="true"],
+  .character-inner, .time-display, .controls, .ring-overlay,
+  .app-menu-panel, #row-shell {
+    -webkit-app-region: no-drag;
   }
-  body:hover .top-bar { opacity: 1; }
 
-  .top-btn {
-    background: rgba(255,255,255,0.95);
-    border: 2px solid var(--kirby-pink-dark);
-    color: var(--kirby-pink-dark);
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-family: 'Jua', sans-serif;
-    font-size: 15px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 0 var(--kirby-pink-dark);
-  }
-  .top-btn:hover { background: var(--kirby-pink-light); }
-  .top-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--kirby-pink-dark); }
-  .top-btn.danger { border-color: var(--danger); color: var(--danger); box-shadow: 0 2px 0 var(--danger); }
-  .top-btn.danger:hover { background: #ffe4e6; }
-  .top-btn.dimmed { opacity: 0.45; }
-  /* Electron 환경이 아닐 때 숨김 (브라우저에서 프로토타이핑할 때) */
+  /* Electron 환경이 아닐 때 숨김 (브라우저에서 프로토타입할 때) */
   body:not(.is-electron) .electron-only { display: none; }
 
-  /* ---------- 가로 정렬 행 ---------- */
-  #row {
+  /* ---------- 하단 행(캐릭터 + 앱 메뉴) ---------- */
+  #row-shell {
     position: fixed;
     bottom: 24px;
     left: 50%;
@@ -81,11 +55,102 @@
     flex-direction: row;
     align-items: flex-end;
     gap: 0;
+    z-index: 100;
   }
+  #row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0;
+  }
+
+  /* 행 호버 시 컨트롤 + ⋮ 메뉴 트리거 노출 (기존 카드별 controls와 맞춤) */
+  .row-app-menu {
+    width: 34px;
+    height: 246px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .row-app-menu-spacer { flex: 1; min-height: 0; width: 100%; }
+  .menu-slot {
+    height: 26px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+  #row-shell:hover .menu-slot {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .menu-dots-btn {
+    background: rgba(255,255,255,0.95);
+    border: 2px solid var(--kirby-pink-light);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 0 var(--kirby-pink-light);
+    padding: 0;
+  }
+  .menu-dots-btn:hover { background: var(--kirby-pink-light); }
+  .app-menu-panel {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    min-width: 168px;
+    background: #fffafd;
+    border: 2px solid var(--kirby-pink-dark);
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(255, 143, 196, 0.35);
+    padding: 6px;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 400;
+  }
+  .app-menu-panel.open { display: flex; }
+  .app-menu-panel .menu-action {
+    width: 100%;
+    text-align: left;
+    background: white;
+    border: 2px solid var(--kirby-pink-light);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-family: 'Gaegu', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--kirby-pink-light);
+  }
+  .app-menu-panel .menu-action:hover { background: var(--kirby-pink-light); }
+  .app-menu-panel .menu-action:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--kirby-pink-light); }
+  .app-menu-panel .menu-action.danger {
+    border-color: #ffd0d4;
+    color: var(--danger);
+    box-shadow: 0 2px 0 #ffd0d4;
+  }
+  .app-menu-panel .menu-action.danger:hover { background: #ffe4e6; }
+  .app-menu-panel .menu-action.dimmed { opacity: 0.55; }
 
   /* ---------- Kirby 타이머 카드 ---------- */
   .kirby-timer {
-    width: 200px;
+    width: 216px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -96,9 +161,18 @@
 
   .character-stage {
     position: relative;
+    width: 216px;
+    height: 216px;
+    padding: 8px;
+    box-sizing: border-box;
+    -webkit-app-region: drag;
+  }
+  .character-inner {
+    position: relative;
     width: 200px;
     height: 200px;
-    /* idle-bounce 제거됨 */
+    margin: 0 auto;
+    -webkit-app-region: no-drag;
   }
   .kirby-timer.running .character-stage { animation: breathe 1.4s ease-in-out infinite; }
   @keyframes breathe {
@@ -215,9 +289,13 @@
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     z-index: 3000;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 10px 24px;
+    -webkit-overflow-scrolling: touch;
   }
   .modal-bg.show { display: flex; }
   .modal {
@@ -228,6 +306,12 @@
     border: 3px solid var(--kirby-pink-light);
     min-width: 320px;
     max-width: 92vw;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: auto 0;
+    flex-shrink: 0;
+    overscroll-behavior: contain;
   }
   .modal h2 {
     font-family: 'Jua', sans-serif;
@@ -412,14 +496,21 @@
   </defs>
 </svg>
 
-<div class="top-bar">
-  <button class="top-btn" id="addBtn" title="새 친구 추가">+</button>
-  <button class="top-btn electron-only" id="pinBtn" title="항상 위에 (켜짐)">📌</button>
-  <button class="top-btn electron-only" id="hideBtn" title="트레이로 숨기기">−</button>
-  <button class="top-btn electron-only danger" id="closeBtn" title="종료">✕</button>
+<div id="row-shell">
+  <div id="row"></div>
+  <div class="row-app-menu" id="rowAppMenu">
+    <div class="row-app-menu-spacer" aria-hidden="true"></div>
+    <div class="menu-slot">
+      <button type="button" class="menu-dots-btn" id="appMenuToggle" title="더보기">⋮</button>
+      <div class="app-menu-panel" id="appMenuPanel" role="menu">
+        <button type="button" class="menu-action" id="menuAddBtn" role="menuitem">＋ 새 친구 추가</button>
+        <button type="button" class="menu-action electron-only" id="menuPinBtn" role="menuitem">📌 항상 위에</button>
+        <button type="button" class="menu-action electron-only" id="menuHideBtn" role="menuitem">− 창 숨기기</button>
+        <button type="button" class="menu-action electron-only danger" id="menuCloseBtn" role="menuitem">✕ 종료</button>
+      </div>
+    </div>
+  </div>
 </div>
-
-<div id="row"></div>
 
 <!-- Settings Modal -->
 <div class="modal-bg" id="modal">
@@ -455,8 +546,7 @@
       <div class="switch on" id="soundSwitch"></div>
     </div>
     <div class="modal-actions">
-      <button class="pill-btn secondary" id="cancelBtn">취소</button>
-      <button class="pill-btn" id="saveBtn">시작!</button>
+      <button type="button" class="pill-btn" id="saveBtn">적용 후 시작</button>
     </div>
   </div>
 </div>
@@ -717,6 +807,7 @@ function makeTimer({minutes = 25, seconds = 0, characterId = 'kirby', soundOn = 
   node.className = 'kirby-timer';
   node.innerHTML = `
     <div class="character-stage">
+      <div class="character-inner">
       <div class="character-art"></div>
       <svg class="ring-overlay" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <circle class="ring-track" cx="100" cy="100" r="88" fill="none"
@@ -726,12 +817,12 @@ function makeTimer({minutes = 25, seconds = 0, characterId = 'kirby', soundOn = 
                 stroke-dasharray="553" stroke-dashoffset="0"
                 transform="rotate(-90 100 100)"/>
       </svg>
-      <div class="time-display">00:00</div>
+      <div class="time-display" title="시간·캐릭터 설정">00:00</div>
+      </div>
     </div>
     <div class="controls">
-      <button class="ctrl-btn" data-act="reset" title="리셋">↺</button>
-      <button class="ctrl-btn" data-act="set" title="설정">⚙</button>
-      <button class="ctrl-btn danger" data-act="delete" title="삭제">✕</button>
+      <button class="ctrl-btn" data-act="reset" title="처음부터">↺</button>
+      <button class="ctrl-btn danger" data-act="delete" title="이 타이머 삭제">✕</button>
     </div>
   `;
 
@@ -793,7 +884,7 @@ function renderTimer(t) {
 // ======================== 행 재구성 ========================
 const ROW = document.getElementById('row');
 function rebuildRow() {
-  ROW.innerHTML = '';
+  while (ROW.firstChild) ROW.removeChild(ROW.firstChild);
   timers.forEach(t => ROW.appendChild(t.el));
 }
 
@@ -811,8 +902,7 @@ function bindEvents(t) {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const act = btn.dataset.act;
-      if (act === 'reset')       resetTimer(t);
-      else if (act === 'set')    openModal(t);
+      if (act === 'reset') resetTimer(t);
       else if (act === 'delete') deleteTimer(t);
     });
   });
@@ -867,6 +957,7 @@ function buildCharPicker(selectedId) {
 }
 
 function openModal(t) {
+  closeAppMenu();
   activeTimer = t;
   inH.value = Math.floor(t.totalSec / 3600);
   inM.value = Math.floor((t.totalSec % 3600) / 60);
@@ -878,7 +969,6 @@ function openModal(t) {
 }
 function closeModal() { modal.classList.remove('show'); activeTimer = null; }
 
-document.getElementById('cancelBtn').addEventListener('click', closeModal);
 modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 soundSwitch.addEventListener('click', () => soundSwitch.classList.toggle('on'));
 
@@ -913,8 +1003,27 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   saveState();
 });
 
-document.getElementById('addBtn').addEventListener('click', () => {
+const appMenuPanel = document.getElementById('appMenuPanel');
+function closeAppMenu() {
+  appMenuPanel?.classList.remove('open');
+}
+
+document.getElementById('appMenuToggle')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  appMenuPanel?.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!appMenuPanel?.classList.contains('open')) return;
+  if (e.target.closest('#rowAppMenu')) return;
+  closeAppMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAppMenu();
+});
+
+document.getElementById('menuAddBtn')?.addEventListener('click', () => {
   makeTimer({ minutes: 10 });
+  closeAppMenu();
 });
 
 // ======================== Electron 통합 ========================
@@ -923,24 +1032,31 @@ document.getElementById('addBtn').addEventListener('click', () => {
 if (window.kirbyAPI) {
   document.body.classList.add('is-electron');
 
-  const closeBtn = document.getElementById('closeBtn');
-  const hideBtn = document.getElementById('hideBtn');
-  const pinBtn = document.getElementById('pinBtn');
+  const menuCloseBtn = document.getElementById('menuCloseBtn');
+  const menuHideBtn = document.getElementById('menuHideBtn');
+  const menuPinBtn = document.getElementById('menuPinBtn');
 
-  closeBtn?.addEventListener('click', () => window.kirbyAPI.closeWindow());
-  hideBtn?.addEventListener('click', () => window.kirbyAPI.hideWindow());
+  menuCloseBtn?.addEventListener('click', () => {
+    closeAppMenu();
+    window.kirbyAPI.closeWindow();
+  });
+  menuHideBtn?.addEventListener('click', () => {
+    closeAppMenu();
+    window.kirbyAPI.hideWindow();
+  });
 
   // 항상 위 토글
-  pinBtn?.addEventListener('click', async () => {
+  menuPinBtn?.addEventListener('click', async () => {
     const isOn = await window.kirbyAPI.toggleAlwaysOnTop();
-    pinBtn.classList.toggle('dimmed', !isOn);
-    pinBtn.title = isOn ? '항상 위에 (켜짐)' : '항상 위에 (꺼짐)';
+    menuPinBtn.classList.toggle('dimmed', !isOn);
+    menuPinBtn.title = isOn ? '항상 위에 (켜짐)' : '항상 위에 (꺼짐)';
+    closeAppMenu();
   });
 
   // 시작 시 핀 버튼 상태 초기화
   window.kirbyAPI.isAlwaysOnTop().then(isOn => {
-    pinBtn?.classList.toggle('dimmed', !isOn);
-    if (pinBtn) pinBtn.title = isOn ? '항상 위에 (켜짐)' : '항상 위에 (꺼짐)';
+    menuPinBtn?.classList.toggle('dimmed', !isOn);
+    if (menuPinBtn) menuPinBtn.title = isOn ? '항상 위에 (켜짐)' : '항상 위에 (꺼짐)';
   });
 
   // 캐릭터 폴더 열기 (사용자가 직접 SVG 추가 가능)
